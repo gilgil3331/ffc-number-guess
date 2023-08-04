@@ -20,8 +20,12 @@ if [[ -z $usernameFromDatabase ]]; then
   echo "Welcome, $username! It looks like this is your first time here."
 else
   games_played=$($PSQL "SELECT games_played FROM users WHERE username='$username';")
+  best_game=$($PSQL "SELECT best_game FROM users WHERE username='$username';")
   echo "Welcome back, $username! You have played $games_played games, and your best game took $best_game guesses."
 fi
+
+games_played_incremented=$((games_played + 1))
+echo $($PSQL "UPDATE users SET games_played = $games_played_incremented WHERE username='$username';")
 
 echo "Guess the secret number between 1 and 1000:"
 read userInput
@@ -32,18 +36,18 @@ guessAttempts=1
 until isNumber "$userInput" && [ "$userInput" -eq "$randomNumber" ]; do
     if ! isNumber "$userInput"; then
         echo "That is not an integer, guess again:"
-    elif [ "$userInput" -gt "$randomNumber" ]; then
-        echo "It's higher than that, guess again:"
     elif [ "$userInput" -lt "$randomNumber" ]; then
+        echo "It's higher than that, guess again:"
+    elif [ "$userInput" -gt "$randomNumber" ]; then
         echo "It's lower than that, guess again:"
     fi
     ((guessAttempts++))
+    
+    if [ -z "$usernameFromDatabase" ] || [ "$guessAttempts" -le "$best_game" ]; then
+      $PSQL "UPDATE users SET best_game = $guessAttempts WHERE username='$username';"
+    fi
+
     read userInput
 done
+
 echo "You guessed it in $guessAttempts tries. The secret number was $randomNumber. Nice job!"
-
-
-
-
-
-
