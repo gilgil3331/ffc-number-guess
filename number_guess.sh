@@ -1,5 +1,12 @@
 #!/bin/bash
 PSQL="psql --username=freecodecamp --dbname=number_guess -t --no-align -c"
+
+function checkBestGame() {
+    if [ -z "$usernameFromDatabase" ] || [ "$guessAttempts" -le "$best_game" ]; then
+      $PSQL "UPDATE users SET best_game = $guessAttempts WHERE username='$username';"
+    fi
+}
+
 echo "Enter your username:"
 read username
 
@@ -25,7 +32,7 @@ else
 fi
 
 games_played_incremented=$((games_played + 1))
-echo $($PSQL "UPDATE users SET games_played = $games_played_incremented WHERE username='$username';")
+$PSQL "UPDATE users SET games_played = $games_played_incremented WHERE username='$username';"
 
 echo "Guess the secret number between 1 and 1000:"
 read userInput
@@ -34,17 +41,15 @@ echo "psss, number it $randomNumber"
 guessAttempts=1
 
 until isNumber "$userInput" && [ "$userInput" -eq "$randomNumber" ]; do
+  ((guessAttempts++))
     if ! isNumber "$userInput"; then
         echo "That is not an integer, guess again:"
     elif [ "$userInput" -lt "$randomNumber" ]; then
         echo "It's higher than that, guess again:"
+        checkBestGame
     elif [ "$userInput" -gt "$randomNumber" ]; then
         echo "It's lower than that, guess again:"
-    fi
-    ((guessAttempts++))
-    
-    if [ -z "$usernameFromDatabase" ] || [ "$guessAttempts" -le "$best_game" ]; then
-      $PSQL "UPDATE users SET best_game = $guessAttempts WHERE username='$username';"
+        checkBestGame
     fi
 
     read userInput
